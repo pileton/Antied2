@@ -1,4 +1,4 @@
-      const React = require("react");
+const React = require("react");
 const { findByProps, findByCode } = require("vendetta/metro/common");
 const { before } = require("vendetta/patcher");
 const { FluxDispatcher } = require("vendetta/metro/common");
@@ -79,7 +79,7 @@ function start() {
       if (message && message.isDeleted && !message.dismissed) {
         // Add red tint to the message bubble (via style prop)
         const style = { ...result.props.style, backgroundColor: "rgba(255, 0, 0, 0.1)" };
-        
+
         // Create dismiss button (simple React button, styled like Discord's subtle buttons)
         const DismissButton = (
           <button
@@ -105,7 +105,7 @@ function start() {
             Dismiss
           </button>
         );
-        
+
         // Clone and add button as a child (positioned absolutely over the message)
         const childrenWithButton = React.Children.toArray(result.props.children);
         childrenWithButton.push(DismissButton);
@@ -130,7 +130,7 @@ module.exports = {
   start,
   stop,
   // Vendetta metadata (matches manifest)
-  name: "antied test",
+  name: "Cute Moodle v1.4.4",
   description: "Keeps a temporary record of deleted messages and any edits until you reload the app.",
   authors: [{ name: "Angelw0lf", id: "692632336961110087" }],
 };
