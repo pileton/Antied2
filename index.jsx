@@ -1,4 +1,4 @@
-const React = require("react");
+      const React = require("react");
 const { findByProps, findByCode } = require("vendetta/metro/common");
 const { before } = require("vendetta/patcher");
 const { FluxDispatcher } = require("vendetta/metro/common");
@@ -21,6 +21,7 @@ function start() {
       if (message && !message.isDeleted) {
         // Set flags and modify content (original + red diff markdown for deleted look)
         message.isDeleted = true;
+        message.dismissed = false; // Initialize dismissed flag
         message.deletedAt = Date.now();
         const originalContent = message.content || "";
         message.content = `**This message is deleted!**\n\`\`\`diff\n- ${originalContent}\n\`\`\``;
@@ -47,7 +48,7 @@ function start() {
   }));
 
   // Optional: Patch message render for custom edit history display (extend here if needed)
-  // Find the MessageContent component (search by code for "edited" timestamp)
+  // Find the MessageContent component (search by code for "renderEmojis", "Markdown")
   const MessageContent = findByCode("renderEmojis", "Markdown");
   if (MessageContent) {
     const originalRender = MessageContent.prototype.render;
@@ -68,17 +69,50 @@ function start() {
     };
   }
 
-  // Optional: Patch message wrapper for red background on deleted (find Message wrapper component)
+  // Patch message wrapper for red background on deleted + dismiss button
   const MessageWrapper = findByCode("type:Message", "compact");
   if (MessageWrapper) {
     const originalRender = MessageWrapper.prototype.render;
     MessageWrapper.prototype.render = function (...args) {
       const result = originalRender.call(this, ...args);
       const message = this.props.message;
-      if (message && message.isDeleted) {
+      if (message && message.isDeleted && !message.dismissed) {
         // Add red tint to the message bubble (via style prop)
         const style = { ...result.props.style, backgroundColor: "rgba(255, 0, 0, 0.1)" };
-        return React.cloneElement(result, { style });
+        
+        // Create dismiss button (simple React button, styled like Discord's subtle buttons)
+        const DismissButton = (
+          <button
+            onClick={() => {
+              message.dismissed = true;
+              // Force re-render by dispatching a dummy update (or use setState if available; this simulates flux update)
+              FluxDispatcher.dispatch({ type: "MESSAGE_UPDATE", message: { ...message } });
+            }}
+            style={{
+              position: "absolute",
+              top: "4px",
+              right: "4px",
+              background: "rgba(240, 71, 71, 0.8)", // Red tint
+              color: "white",
+              border: "none",
+              borderRadius: "3px",
+              padding: "2px 6px",
+              fontSize: "12px",
+              cursor: "pointer",
+              zIndex: 10,
+            }}
+          >
+            Dismiss
+          </button>
+        );
+        
+        // Clone and add button as a child (positioned absolutely over the message)
+        const childrenWithButton = React.Children.toArray(result.props.children);
+        childrenWithButton.push(DismissButton);
+        return React.cloneElement(result, { style, children: childrenWithButton });
+      } else if (message && message.isDeleted && message.dismissed) {
+        // Hide dismissed deleted messages (return null or empty div for ephemeral removal)
+        return <div style={{ height: 0, overflow: "hidden" }} />; // Collapses space
       }
       return result;
     };
